@@ -9,34 +9,66 @@
 #define MAX_MESSAGE_LENGTH 200
 
 
+void reverser_response(int sockfd,char *write_buff,char *read_buff){
+	ssize_t received;
+	received=recv(sockfd,read_buff,sizeof(read_buff),0);
+	printf("Server received %zu bytes\n",received);
+	char *reversed;
+	int l=strlen(read_buff);
+	//get string length of word we received 
+	//allocate enough space for the reversed word + a null terminator at the end
+	reversed=(char*)(malloc(sizeof(char) * (l+1)));
+	int i=0;
+	int length=l+1;
+	//populate the reversed string literal with characters in opposite order of input read in through read buff
+	//populate write buff with this new reversed string
+	while (i!=l){
+		printf("%c\n",read_buff[i]);
+		reversed[(l-1)-i]=read_buff[i];
+		printf("Reversed %d is %c\n",(l-1)-i,reversed[(l-1)-i]);
+		write_buff[(l-1)-i]=reversed[(l-1-i)];
+		i++;
+	}
+	write_buff[l]='\0';
+	//write out all characters, plus 1 for the null terminator back to the client
+	ssize_t sent=send(sockfd,write_buff,strlen(write_buff)+1,0);
+	printf("Server sent back message of this size: %zu\n",sent);
+}
+
+
+
 int main(){
 	int cfd,afd;
+	//I'm pretty sure service will be the port name
 	char service[NI_MAXSERV];
 	//hostname will be the name of the IP address
 	char host[NI_MAXHOST];
-	//hints is used to set certain settings within each of the addrinfo structs in the linkedlist that will be spawned by getaddrinfo 
+	char read_buff[200];
+	char write_buff[200];
+	//I rmemember hints is used to set certain settings within the struct addrinfo result we create
 	struct addrinfo hints;
-	//this is used for looping through possible addrinfo structus
+	//this is used for looping through possible addrinfo structs
 	struct addrinfo *result, *rp;
-	//this struct will store the information of the peer socket (service name/host name) that will connect to our client
+	//I think this stores the address of the client that connect with us
 	struct sockaddr_storage claddr;
 	//combined host + service name with padding of 10 bits
 	char addrstr[NI_MAXHOST+NI_MAXSERV+10];
 	memset(&hints,0,sizeof(struct addrinfo));
+	bzero(read_buff,sizeof(read_buff));
+	bzero(write_buff,sizeof(write_buff));
 	//socklen is the size of the socket
 	socklen_t socklen;
 	//AF_UNSPEC means that we can use an unspecified IP protocl: IPV4 or IPV6
 	hints.ai_family=AF_UNSPEC; 
-	//spawn addresses for stream, not datagram sockets
+	//stream socket
 	hints.ai_socktype=SOCK_STREAM;
 	hints.ai_next=NULL;
 	hints.ai_canonname=NULL;
 	hints.ai_addr=NULL;
-	//Passive: we wait for someone to join with our socket, numeric serv: use the numeric service name name
+	//Passive: we wait for someone to join with our socket, numeric serv: use the numeric host name
 	hints.ai_flags=AI_PASSIVE | AI_NUMERICSERV;
 	//getadrrinfo: 0 is success, takes in as arguments, NULL(?) our port number, references to the hints and result addrinfo structs
-	//getaddrinfo generates a linked list of addrinfo structs for the specified host name/service name\
-	//A null first parameter here, in combination with the AI PASSIVE flag set in hints, indicates this will be a server that will listen and wait for connections
+	//actually getaddrinfo generates a linked list of addrinfo structs for the specified host name/service name
 	//in this case, result is the head of the linkedlist, hints is the hints thing that sets csome conditions
 	if ((getaddrinfo(NULL,PORT_NUM,&hints,&result))!=0){
 		printf("Failed to get result pointer of address structs");
@@ -51,7 +83,6 @@ int main(){
 			continue;
 		}
 		//rp->ai_addr could be a pointer to a sockaddr_in or sockaddr_in6
-		//once we've successfully bound our socket to a sockaddrinfo struct, break out of the loop
 		if (bind(cfd,rp->ai_addr, rp->ai_addrlen)==0){
 			break;
 		}
@@ -61,7 +92,6 @@ int main(){
 		printf("Reached end of address list without finding suitable socket address space");
 		exit(EXIT_FAILURE);
 	}
-	//free memory that was alloccated to result sockaddrinfo pointer which we created to let us loop through the list of possible addresses
 	freeaddrinfo(result);
 	if (listen(cfd,BACKLOG)==0){
 		printf("Server listening....\n");
@@ -72,14 +102,11 @@ int main(){
 		if (afd==-1){
 			perror("Accept failed");
 		}
-		//arguments: a pointer to a referce to a struct that contains the host and service info of the connecting socket, the length of the connecting socket
-		//host and serv are caller-allocated buffers that hold the host/service name we got from the first argument
-		//this will populate our host and service buffers 
 		getnameinfo((struct sockaddr*) &claddr,socklen,
 			host,NI_MAXHOST,service,NI_MAXSERV,0);
-		//format a string that contains both of the service and host names
 		snprintf(addrstr,NI_MAXSERV+NI_MAXHOST+10, "Connection received from: (%s, %s)", host,service);	
 		printf("%s\n",addrstr);
+		reverser_response(afd,write_buff,read_buff);
 	
 	}
 	close(afd);
