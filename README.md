@@ -1,0 +1,2 @@
+# tcp_ip_client_server
+A TCP/IP client server implementation. The client reads in a message from stdin, and sends it to the server, which reverses it, and sends the message back through the socket to the client. The client takes in one command line argument, which specifies the parameter for getaddrinfo, or in other words, the host name for the address for which the server will look through possible sockets to connect to. 
