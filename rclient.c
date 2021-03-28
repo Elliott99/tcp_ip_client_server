@@ -11,7 +11,10 @@
 void chat_function(int sockfd,char *write_buffer,char *read_buffer){
 	printf("\nEnter a message to send to the server. The server will reverse it, and send it back\n");
 	fscanf(stdin,"%s",write_buffer);
-	int m=strlen(write_buffer);
+	ssize_t m=strlen(write_buffer);
+	if (m > MAX_MESSAGE_LENGTH){
+		perror("Cannot send message larger than the maximum message length, which is 200 bytes");
+	}
 	write_buffer[m]='\0';
 	int i=0;
 	ssize_t message_size;
