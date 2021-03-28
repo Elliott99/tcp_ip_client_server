@@ -25,14 +25,15 @@ void reverser_response(int sockfd,char *write_buff,char *read_buff){
 	while (i!=l){
 		printf("%c\n",read_buff[i]);
 		reversed[(l-1)-i]=read_buff[i];
-		printf("Reversed %d is %c\n",(l-1)-i,reversed[(l-1)-i]);
 		write_buff[(l-1)-i]=reversed[(l-1-i)];
 		i++;
 	}
 	write_buff[l]='\0';
 	//write out all characters, plus 1 for the null terminator back to the client
 	ssize_t sent=send(sockfd,write_buff,strlen(write_buff)+1,0);
-	printf("Server sent back message of this size: %zu\n",sent);
+	if (sent!=received){
+		perror("Server did not send back a message of equal length");
+	}
 }
 
 
